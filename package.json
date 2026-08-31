@@ -7,14 +7,18 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "migrate": "node src/data/run-migrations.js",
     "seed": "node src/data/seed.js",
+    "db:verify": "node src/data/verify-db.js",
+    "health:check": "node tests/verify_endpoints.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js"
   },
   "keywords": [
     "rfsp",
     "digital-menu",
     "restaurant",
-    "modular-monolith"
+    "modular-monolith",
+    "postgresql"
   ],
   "author": "RFSP Architecture & Engineering Team",
   "license": "UNLICENSED",

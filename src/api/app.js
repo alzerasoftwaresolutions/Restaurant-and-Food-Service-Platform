@@ -3,6 +3,8 @@ import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { config } from '../config/appConfig.js';
+import { checkDbHealth } from '../data/db.js';
 import authRoutes from './routes/authRoutes.js';
 import organizationRoutes from './routes/organizationRoutes.js';
 import menuRoutes from './routes/menuRoutes.js';
@@ -22,14 +24,45 @@ const publicDir = path.join(rootDir, 'public');
 export function createApp() {
   const app = express();
 
+  // Trust proxy for HTTPS headers when behind nginx / cloud reverse proxies
+  if (config.env === 'production' || config.env === 'staging') {
+    app.set('trust proxy', 1);
+  }
+
   // Basic middleware
-  app.use(cors());
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(cors({
+    origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(',').map(s => s.trim()),
+    credentials: true
+  }));
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Serve static assets
   app.use(express.static(publicDir));
-  app.use('/uploads', express.static(path.join(publicDir, 'uploads')));
+  app.use('/uploads', express.static(config.media.uploadDir));
+
+  // Health check endpoint with real database verification
+  app.get('/api/health', async (_req, res) => {
+    const dbHealth = await checkDbHealth();
+    const isHealthy = dbHealth.status === 'UP';
+
+    const payload = {
+      status: isHealthy ? 'UP' : 'DOWN',
+      product: 'Restaurant & Food Service Platform (RFSP)',
+      unit: 'Core Platform v1',
+      environment: config.env,
+      database: {
+        status: dbHealth.status,
+        engine: dbHealth.engine || 'PostgreSQL',
+        latencyMs: dbHealth.latencyMs,
+        mode: dbHealth.mode
+      },
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString()
+    };
+
+    res.status(isHealthy ? 200 : 503).json(payload);
+  });
 
   // Experience Layer API Routes
   app.use('/api/v1/auth', authRoutes);
@@ -40,17 +73,6 @@ export function createApp() {
   app.use('/api/v1/public', publicMenuRoutes);
   app.use('/api/v1/dashboard', dashboardRoutes);
   app.use('/api/v1/audit-logs', auditRoutes);
-
-  // Health check endpoint
-  app.get('/api/health', (_req, res) => {
-    res.json({
-      status: 'UP',
-      product: 'Restaurant & Food Service Platform (RFSP)',
-      unit: 'Core Platform v1',
-      database: 'PostgreSQL',
-      timestamp: new Date().toISOString()
-    });
-  });
 
   // Canonical QR Scan Handler: /qr/:code
   // Resolves QR code and redirects browser to canonical public menu destination

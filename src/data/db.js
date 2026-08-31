@@ -16,13 +16,19 @@ export async function getDb() {
     return poolInstance;
   }
 
-  // Attempt real PostgreSQL connection if explicit config or DATABASE_URL is set
-  const hasRealConfig = Boolean(process.env.DATABASE_URL || (process.env.PGHOST && process.env.PGHOST !== 'localhost'));
+  const isStrictEnv = config.env === 'staging' || config.env === 'production';
+  const hasRealConfig = Boolean(process.env.DATABASE_URL || process.env.PGHOST || isStrictEnv);
 
   if (hasRealConfig) {
     try {
       const poolConfig = config.database.url
-        ? { connectionString: config.database.url, ssl: config.database.ssl }
+        ? {
+            connectionString: config.database.url,
+            ssl: config.database.ssl,
+            max: config.database.pool.max,
+            idleTimeoutMillis: config.database.pool.idleTimeoutMillis,
+            connectionTimeoutMillis: config.database.pool.connectionTimeoutMillis
+          }
         : {
             host: config.database.host,
             port: config.database.port,
@@ -36,29 +42,44 @@ export async function getDb() {
           };
 
       const pool = new Pool(poolConfig);
+
       // Test connectivity
       const client = await pool.connect();
       client.release();
+
       poolInstance = pool;
       isInMemoryMode = false;
-      console.log(`[Database] Connected to PostgreSQL at ${config.database.host}:${config.database.port}/${config.database.database}`);
+
+      // Handle unexpected pool errors on idle clients
+      pool.on('error', (err) => {
+        console.error('[Database Pool Error] Unexpected idle client error:', err.message);
+      });
+
+      console.log(`[Database] Connected to PostgreSQL at ${config.database.host}:${config.database.port}/${config.database.database} (Pool Max: ${config.database.pool.max})`);
       return poolInstance;
     } catch (err) {
-      console.warn(`[Database] PostgreSQL daemon not reachable at ${config.database.host}:${config.database.port}. Falling back to embedded in-memory PostgreSQL engine:`, err.message);
+      if (isStrictEnv) {
+        console.error(`[Database Critical Error] Failed to connect to PostgreSQL in ${config.env} environment:`, err.message);
+        throw new Error(`PostgreSQL connection failed in ${config.env} mode: ${err.message}`);
+      }
+      console.warn(`[Database] PostgreSQL daemon not reachable at ${config.database.host}:${config.database.port}. Falling back to embedded in-memory PostgreSQL engine for development:`, err.message);
     }
   }
 
-  // Fallback to in-memory PostgreSQL engine (pg-mem)
+  // Fallback to in-memory PostgreSQL engine (pg-mem) for development / testing
   if (!inMemoryDb) {
     inMemoryDb = newDb();
-    // Register current_timestamp and helpers if needed
     inMemoryDb.public.registerFunction({
       name: 'now',
       returns: inMemoryDb.public.getType('timestamp'),
       implementation: () => new Date()
     });
-    
-    // Create pg-compatible adapter
+    inMemoryDb.public.registerFunction({
+      name: 'current_database',
+      returns: inMemoryDb.public.getType('text'),
+      implementation: () => 'rfsp_core_v1_memory'
+    });
+
     const adapter = inMemoryDb.adapters.createPg();
     poolInstance = new adapter.Pool();
     isInMemoryMode = true;
@@ -66,6 +87,40 @@ export async function getDb() {
   }
 
   return poolInstance;
+}
+
+/**
+ * Perform a database health check query
+ * Returns connectivity status and latency without exposing credentials
+ */
+export async function checkDbHealth() {
+  const startTime = Date.now();
+  try {
+    const pool = await getDb();
+    const result = await pool.query('SELECT 1 AS alive, NOW() AS db_time');
+    const latencyMs = Date.now() - startTime;
+
+    if (result.rows && result.rows.length > 0) {
+      return {
+        status: 'UP',
+        latencyMs,
+        engine: 'PostgreSQL',
+        mode: isInMemoryMode ? 'in-memory-adapter' : 'connection-pool',
+        pool: isInMemoryMode ? null : {
+          total: pool.totalCount,
+          idle: pool.idleCount,
+          waiting: pool.waitingCount
+        }
+      };
+    }
+    return { status: 'DOWN', error: 'No response from database query' };
+  } catch (err) {
+    return {
+      status: 'DOWN',
+      latencyMs: Date.now() - startTime,
+      error: err.message
+    };
+  }
 }
 
 /**
@@ -123,10 +178,11 @@ export async function withTransaction(callback) {
 }
 
 /**
- * Close database connections
+ * Close database connections cleanly during shutdown
  */
 export async function closeDb() {
   if (poolInstance) {
+    console.log('[Database] Closing PostgreSQL connection pool...');
     await poolInstance.end();
     poolInstance = null;
   }

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Digital Menu — RFSP</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <style>
+    /* Customer Menu Specific Styles */
+    body {
+      background-color: #0b0f19;
+      color: #f8fafc;
+      padding-bottom: 80px;
+    }
+
+    .menu-container {
+      max-width: 720px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background-color: #0f172a;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      position: relative;
+      height: 220px;
+      background-color: #1e293b;
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%);
+    }
+
+    .restaurant-header {
+      padding: 0 20px 20px;
+      position: relative;
+      margin-top: -60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .restaurant-logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 20px;
+      background: #1e293b;
+      border: 3px solid #334155;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      object-fit: cover;
+      margin-bottom: 14px;
+    }
+
+    .restaurant-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    .branch-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(234, 88, 12, 0.15);
+      color: #fb923c;
+      border: 1px solid rgba(234, 88, 12, 0.3);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .restaurant-desc {
+      font-size: 14px;
+      color: #94a3b8;
+      max-width: 540px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .branch-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      font-size: 12px;
+      color: #cbd5e1;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 10px;
+      width: 100%;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Menu Switcher (for branches with multiple menus) */
+    .menu-switcher {
+      display: flex;
+      gap: 8px;
+      padding: 14px 20px 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .menu-switcher::-webkit-scrollbar { display: none; }
+
+    .menu-tab-btn {
+      padding: 8px 16px;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .menu-tab-btn.active {
+      background: #ea580c;
+      color: #ffffff;
+      border-color: #ea580c;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
+    }
+
+    /* Search & Filter Bar */
+    .search-filter-section {
+      position: sticky;
+      top: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: #ea580c;
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.25);
+    }
+
+    /* Category Navigation Pills */
+    .category-pills {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scrollbar-width: none;
+    }
+    .category-pills::-webkit-scrollbar { display: none; }
+
+    .cat-pill {
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .cat-pill.active {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    /* Menu Content */
+    .menu-content {
+      padding: 16px 20px;
+    }
+
+    .category-section {
+      margin-bottom: 32px;
+      scroll-margin-top: 140px;
+    }
+
+    .category-heading {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .category-desc {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 16px;
+    }
+
+    .items-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Item Card */
+    .item-card {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .item-card:hover {
+      border-color: rgba(234, 88, 12, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+
+    .item-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .item-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .item-price {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ea580c;
+      margin-bottom: 6px;
+    }
+
+    .item-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .item-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .item-media-thumb {
+      width: 105px;
+      height: 105px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #0f172a;
+      flex-shrink: 0;
+    }
+
+    /* Inactive State Banner */
+    .unavailable-state {
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .unavailable-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 32px;
+    }
+
+    .powered-by {
+      text-align: center;
+      font-size: 12px;
+      color: #475569;
+      padding: 24px 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu-container" id="app">
+    <!-- Loading Screen -->
+    <div id="loading-state" style="padding: 100px 20px; text-align: center;">
+      <div style="font-size: 40px; margin-bottom: 16px;">🍽️</div>
+      <h2 style="font-size: 20px; margin-bottom: 8px;">Loading Digital Menu...</h2>
+      <p style="color: #64748b; font-size: 14px;">Connecting to restaurant platform</p>
+    </div>
+
+    <!-- Inactive State -->
+    <div id="unavailable-view" class="unavailable-state" style="display: none;">
+      <div class="unavailable-icon">⚠️</div>
+      <h2 id="unavailable-title" style="font-size: 22px; margin-bottom: 8px;">Menu Unavailable</h2>
+      <p id="unavailable-msg" style="color: #94a3b8; font-size: 15px; margin-bottom: 24px;"></p>
+      <div id="unavailable-branch-info" style="font-size: 13px; color: #64748b;"></div>
+    </div>
+
+    <!-- Active Menu View -->
+    <div id="active-menu-view" style="display: none;">
+      <!-- Hero Banner -->
+      <div class="hero-banner" id="hero-banner">
+        <div class="hero-overlay"></div>
+      </div>
+
+      <!-- Restaurant & Branch Info -->
+      <div class="restaurant-header">
+        <img id="restaurant-logo" class="restaurant-logo" src="" alt="Restaurant Logo">
+        <h1 id="restaurant-name" class="restaurant-title"></h1>
+        <div class="branch-badge" id="branch-badge">📍 <span id="branch-name"></span></div>
+        <p id="restaurant-desc" class="restaurant-desc"></p>
+        
+        <div class="branch-meta">
+          <div class="meta-item"><span>📍</span> <span id="branch-address"></span></div>
+          <div class="meta-item"><span>🕒</span> <span id="branch-hours"></span></div>
+          <div class="meta-item"><span>📞</span> <span id="branch-phone"></span></div>
+        </div>
+      </div>
+
+      <!-- Menu Tabs Switcher (if multiple menus) -->
+      <div class="menu-switcher" id="menu-switcher"></div>
+
+      <!-- Sticky Search & Category Navigation -->
+      <div class="search-filter-section">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="search-input" placeholder="Search dishes, ingredients, drinks...">
+        </div>
+        <div class="category-pills" id="category-pills"></div>
+      </div>
+
+      <!-- Menu Categories & Items -->
+      <div class="menu-content" id="menu-content"></div>
+
+      <div class="powered-by">
+        RFSP Core Platform v1 • Authoritative Digital Menu
+      </div>
+    </div>
+  </div>
+
+  <!-- Item Detail Modal -->
+  <div class="modal-overlay" id="item-modal">
+    <div class="modal-content" style="padding: 0; overflow: hidden; max-width: 480px;">
+      <img id="modal-item-img" style="width: 100%; height: 220px; object-fit: cover; display: none; background: #0f172a;" src="" alt="">
+      <div style="padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <h2 id="modal-item-name" style="font-size: 20px; font-weight: 700; color: #ffffff;"></h2>
+          <span id="modal-item-price" style="font-size: 20px; font-weight: 800; color: #ea580c; white-space: nowrap;"></span>
+        </div>
+        <p id="modal-item-desc" style="color: #94a3b8; font-size: 14px; line-height: 1.5; margin-bottom: 16px;"></p>
+        
+        <div id="modal-item-tags" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;"></div>
+        
+        <div id="modal-item-allergens-wrap" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px; padding: 12px; font-size: 13px; color: #fca5a5; margin-bottom: 20px;">
+          <strong>Allergen Warning:</strong> <span id="modal-item-allergens"></span>
+        </div>
+
+        <button class="btn btn-secondary" style="width: 100%;" onclick="closeItemModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/menu/js/customer-menu.js"></script>
+</body>
+</html>

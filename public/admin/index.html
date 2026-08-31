@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RFSP Core Platform v1 — Administration Console</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <style>
+    /* Administration Layout Styles */
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 50;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar-brand {
+      padding: 24px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4);
+    }
+
+    .brand-text h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      color: var(--accent-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-menu {
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 12px 12px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(234, 88, 12, 0.15), rgba(245, 158, 11, 0.1));
+      color: #fb923c;
+      border-color: rgba(234, 88, 12, 0.3);
+    }
+
+    .nav-item .nav-badge {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--bg-surface-elevated);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent-primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* Main Content */
+    .main-wrapper {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .top-header {
+      height: var(--header-height);
+      background-color: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: var(--glass-blur);
+    }
+
+    .page-title h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .content-body {
+      padding: 32px;
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* KPI Metric Cards Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .metric-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .metric-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .metric-lbl {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    /* Media Grid */
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .media-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .media-thumb {
+      width: 100%;
+      height: 130px;
+      object-fit: cover;
+      background: #0f172a;
+    }
+
+    .media-info {
+      padding: 10px;
+      font-size: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Matrix Table */
+    .matrix-table th, .matrix-table td {
+      text-align: center;
+    }
+    .matrix-table th:first-child, .matrix-table td:first-child {
+      text-align: left;
+    }
+
+    /* Login Overlay */
+    .login-container {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #1e293b 0%, #0b0f19 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color-hover);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: var(--shadow-xl);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================
+       LOGIN VIEW OVERLAY
+       ========================================== -->
+  <div id="login-overlay" class="login-container" style="display: none;">
+    <div class="login-card">
+      <div style="text-align: center; margin-bottom: 28px;">
+        <div style="width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, #ea580c, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px; box-shadow: 0 8px 20px rgba(234, 88, 12, 0.4);">🍽️</div>
+        <h2 style="font-size: 24px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">Sign In to RFSP</h2>
+        <p style="color: #94a3b8; font-size: 14px;">Core Platform v1 — Administration Console</p>
+      </div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-identifier">Username or Email</label>
+          <input type="text" id="login-identifier" class="form-control" placeholder="admin or admin@rfsp.local" required value="admin">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required value="AdminPass123!">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Sign In</button>
+      </form>
+
+      <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--text-muted); text-align: center;">
+        <p>Demo Admin: <code>admin</code> / <code>AdminPass123!</code></p>
+        <p>Demo Manager: <code>manager</code> / <code>ManagerPass123!</code></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       ADMIN CONSOLE APP LAYOUT
+       ========================================== -->
+  <div class="admin-layout" id="admin-app" style="display: none;">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🍽️</div>
+        <div class="brand-text">
+          <h1>RFSP CORE</h1>
+          <p>Digital Menu v1</p>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-section-title">Overview</div>
+        <div class="nav-item active" data-view="dashboard">
+          <span>📊</span> Dashboard
+        </div>
+
+        <div class="nav-section-title">Organization</div>
+        <div class="nav-item" data-view="restaurant">
+          <span>🏢</span> Restaurant Profile
+        </div>
+        <div class="nav-item" data-view="branches">
+          <span>📍</span> Branches
+          <span class="nav-badge" id="badge-branches">0</span>
+        </div>
+
+        <div class="nav-section-title">Menu Management</div>
+        <div class="nav-item" data-view="menus">
+          <span>📖</span> Menus
+          <span class="nav-badge" id="badge-menus">0</span>
+        </div>
+        <div class="nav-item" data-view="categories">
+          <span>📂</span> Categories
+        </div>
+        <div class="nav-item" data-view="items">
+          <span>🍔</span> Menu Items
+          <span class="nav-badge" id="badge-items">0</span>
+        </div>
+        <div class="nav-item" data-view="assignments">
+          <span>🔗</span> Menu Assignments
+        </div>
+
+        <div class="nav-section-title">Publishing & Assets</div>
+        <div class="nav-item" data-view="qr">
+          <span>📱</span> QR Publishing
+          <span class="nav-badge" id="badge-qrs">0</span>
+        </div>
+        <div class="nav-item" data-view="media">
+          <span>🖼️</span> Media Library
+        </div>
+
+        <div class="nav-section-title">Governance</div>
+        <div class="nav-item" data-view="audit">
+          <span>📜</span> Audit History
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="current-user-avatar">A</div>
+          <div style="font-size: 13px;">
+            <div style="font-weight: 700; color: #ffffff;" id="current-user-name">Admin</div>
+            <div style="font-size: 11px; color: var(--text-muted);" id="current-user-role">Platform Admin</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="logout()" title="Sign Out">🚪</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-wrapper">
+      <header class="top-header">
+        <div class="page-title">
+          <h2 id="header-page-title">Dashboard Overview</h2>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <a href="/menu/downtown-flagship" target="_blank" class="btn btn-secondary btn-sm">
+            <span>🌐</span> View Customer Menu
+          </a>
+          <button class="btn btn-primary btn-sm" onclick="openCreateMenuModal()">
+            <span>➕</span> New Menu
+          </button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- VIEW: DASHBOARD -->
+        <section id="view-dashboard" class="app-view">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">🏢</div>
+              <div>
+                <div class="metric-val" id="metric-restaurants">1</div>
+                <div class="metric-lbl">Restaurants</div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">📍</div>
+              <div>
+                <div class="metric-val" id="metric-branches">2</div>
+                <div class="metric-lbl">Active Branches</div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">📖</div>
+              <div>
+                <div class="metric-val" id="metric-menus">2</div>
+                <div class="metric-lbl">Active Menus</div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="background: rgba(234, 88, 12, 0.15); color: #ea580c;">🍔</div>
+              <div>
+                <div class="metric-val" id="metric-items">9</div>
+                <div class="metric-lbl">Available Items</div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">📱</div>
+              <div>
+                <div class="metric-val" id="metric-qrs">2</div>
+                <div class="metric-lbl">Active QR Codes</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Recent Activity -->
+          <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px;">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">⚡ Quick Actions</h3>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="switchView('branches'); openCreateBranchModal();">
+                  <span>📍</span> Add New Branch
+                </button>
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="switchView('menus'); openCreateMenuModal();">
+                  <span>📖</span> Create Digital Menu
+                </button>
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="switchView('items'); openCreateItemModal();">
+                  <span>🍔</span> Add Menu Item
+                </button>
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="switchView('qr'); openCreateQRModal();">
+                  <span>📱</span> Generate Branch QR Code
+                </button>
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="switchView('media'); openUploadMediaModal();">
+                  <span>🖼️</span> Upload Media Asset
+                </button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">📜 Recent Administrative Activity</h3>
+                <button class="btn btn-secondary btn-sm" onclick="switchView('audit')">View All</button>
+              </div>
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Actor</th>
+                      <th>Action</th>
+                      <th>Target</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboard-recent-activity">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: RESTAURANT PROFILE -->
+        <section id="view-restaurant" class="app-view" style="display: none;">
+          <div class="card" style="max-width: 800px; margin: 0 auto;">
+            <div class="card-header">
+              <h3 class="card-title">🏢 Restaurant Profile & Settings</h3>
+              <span class="badge badge-active" id="restaurant-status-badge">Active</span>
+            </div>
+            <form id="restaurant-form">
+              <input type="hidden" id="rest-id">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label class="form-label" for="rest-name">Restaurant Display Name</label>
+                  <input type="text" id="rest-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="rest-legal">Legal Entity Name</label>
+                  <input type="text" id="rest-legal" class="form-control">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label class="form-label" for="rest-slug">Unique URL Slug</label>
+                  <input type="text" id="rest-slug" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="rest-currency">Operating Currency</label>
+                  <select id="rest-currency" class="form-control">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CAD">CAD ($)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="rest-desc">Restaurant Description / Story</label>
+                <textarea id="rest-desc" class="form-control"></textarea>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label class="form-label" for="rest-phone">Phone Number</label>
+                  <input type="text" id="rest-phone" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="rest-email">Email Address</label>
+                  <input type="email" id="rest-email" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="rest-website">Website URL</label>
+                  <input type="url" id="rest-website" class="form-control">
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Restaurant Lifecycle Status:</span>
+                  <select id="rest-status-select" class="form-control" style="width: 140px;">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Restaurant Profile</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- VIEW: BRANCHES -->
+        <section id="view-branches" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📍 Branch Locations</h3>
+              <button class="btn btn-primary btn-sm" onclick="openCreateBranchModal()">➕ Add Branch</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Branch Name</th>
+                    <th>Code</th>
+                    <th>City & Address</th>
+                    <th>Assigned Menus</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="branches-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: MENUS -->
+        <section id="view-menus" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📖 Digital Menus</h3>
+              <button class="btn btn-primary btn-sm" onclick="openCreateMenuModal()">➕ Create Menu</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Menu Name</th>
+                    <th>Description</th>
+                    <th>Categories</th>
+                    <th>Items</th>
+                    <th>Assigned Branches</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="menus-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: CATEGORIES -->
+        <section id="view-categories" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <h3 class="card-title">📂 Menu Categories</h3>
+                <select id="category-menu-selector" class="form-control" style="width: 220px;" onchange="loadCategoriesForSelectedMenu()">
+                  <!-- Menus populated by JS -->
+                </select>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openCreateCategoryModal()">➕ Add Category</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Category Name</th>
+                    <th>Description</th>
+                    <th>Items Count</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="categories-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: MENU ITEMS -->
+        <section id="view-items" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <h3 class="card-title">🍔 Menu Items</h3>
+                <select id="item-menu-selector" class="form-control" style="width: 220px;" onchange="loadItemsForSelectedMenu()">
+                  <!-- Menus populated by JS -->
+                </select>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openCreateItemModal()">➕ Add Menu Item</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Item Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Dietary / Allergens</th>
+                    <th>Availability</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="items-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: ASSIGNMENTS -->
+        <section id="view-assignments" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🔗 Menu-Branch Assignment Matrix</h3>
+              <p style="font-size: 13px; color: var(--text-muted);">Assign active menus to branches to publish them to customers</p>
+            </div>
+            <div class="table-responsive">
+              <table class="table matrix-table" id="assignment-matrix-table">
+                <!-- Matrix populated by JS -->
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: QR CODES -->
+        <section id="view-qr" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📱 QR Code Publishing</h3>
+              <button class="btn btn-primary btn-sm" onclick="openCreateQRModal()">➕ Generate QR Code</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>QR Code</th>
+                    <th>Branch Target</th>
+                    <th>Destination URL</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="qr-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: MEDIA LIBRARY -->
+        <section id="view-media" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🖼️ Reusable Media Library</h3>
+              <button class="btn btn-primary btn-sm" onclick="openUploadMediaModal()">➕ Upload Image</button>
+            </div>
+            <div class="media-grid" id="media-gallery">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: AUDIT LOG -->
+        <section id="view-audit" class="app-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📜 Administrative Audit History</h3>
+              <div style="display: flex; gap: 10px;">
+                <select id="audit-target-filter" class="form-control" style="width: 160px;" onchange="loadAuditLogs()">
+                  <option value="">All Targets</option>
+                  <option value="RESTAURANT">Restaurant</option>
+                  <option value="BRANCH">Branch</option>
+                  <option value="MENU">Menu</option>
+                  <option value="CATEGORY">Category</option>
+                  <option value="MENU_ITEM">Menu Item</option>
+                  <option value="MENU_ASSIGNMENT">Assignment</option>
+                  <option value="QR_CODE">QR Code</option>
+                  <option value="MEDIA">Media</option>
+                  <option value="USER">User / Auth</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Target Type</th>
+                    <th>Target ID</th>
+                    <th>Result</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================
+       MODALS
+       ========================================== -->
+
+  <!-- Branch Modal (Create / Edit) -->
+  <div class="modal-overlay" id="modal-branch">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-branch-title">Add Branch Location</h3>
+        <button class="modal-close" onclick="closeModal('modal-branch')">&times;</button>
+      </div>
+      <form id="form-branch">
+        <input type="hidden" id="branch-form-id">
+        <div style="display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="branch-form-name">Branch Name</label>
+            <input type="text" id="branch-form-name" class="form-control" placeholder="e.g. Downtown Bistro" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="branch-form-code">Branch Code</label>
+            <input type="text" id="branch-form-code" class="form-control" placeholder="e.g. DT01" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="branch-form-slug">URL Slug (e.g. /menu/downtown-bistro)</label>
+          <input type="text" id="branch-form-slug" class="form-control" placeholder="downtown-bistro">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="branch-form-addr1">Address Line 1</label>
+          <input type="text" id="branch-form-addr1" class="form-control" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="branch-form-city">City</label>
+            <input type="text" id="branch-form-city" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="branch-form-state">State / Province</label>
+            <input type="text" id="branch-form-state" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="branch-form-country">Country</label>
+            <input type="text" id="branch-form-country" class="form-control" value="USA" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="branch-form-phone">Phone Number</label>
+            <input type="text" id="branch-form-phone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="branch-form-email">Email</label>
+            <input type="email" id="branch-form-email" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="branch-form-hours">Opening Hours</label>
+          <input type="text" id="branch-form-hours" class="form-control" placeholder="e.g. Mon-Sat: 11:00 - 22:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="branch-form-status">Status</label>
+          <select id="branch-form-status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-branch')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Branch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Menu Modal (Create / Edit) -->
+  <div class="modal-overlay" id="modal-menu">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-menu-title">Create Digital Menu</h3>
+        <button class="modal-close" onclick="closeModal('modal-menu')">&times;</button>
+      </div>
+      <form id="form-menu">
+        <input type="hidden" id="menu-form-id">
+        <div class="form-group">
+          <label class="form-label" for="menu-form-name">Menu Title</label>
+          <input type="text" id="menu-form-name" class="form-control" placeholder="e.g. All-Day Dining Menu" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="menu-form-desc">Description</label>
+          <textarea id="menu-form-desc" class="form-control" placeholder="Overview of this menu..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="menu-form-status">Lifecycle Status</label>
+          <select id="menu-form-status" class="form-control">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Archived">Archived</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-menu')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Menu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Category Modal -->
+  <div class="modal-overlay" id="modal-category">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-category-title">Add Category</h3>
+        <button class="modal-close" onclick="closeModal('modal-category')">&times;</button>
+      </div>
+      <form id="form-category">
+        <input type="hidden" id="cat-form-id">
+        <div class="form-group">
+          <label class="form-label" for="cat-form-name">Category Name</label>
+          <input type="text" id="cat-form-name" class="form-control" placeholder="e.g. Starters & Crudo" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cat-form-desc">Description</label>
+          <textarea id="cat-form-desc" class="form-control" placeholder="Appetizers to start..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cat-form-order">Display Sequence Order</label>
+          <input type="number" id="cat-form-order" class="form-control" value="0" min="0">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-category')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Menu Item Modal -->
+  <div class="modal-overlay" id="modal-item">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-item-title">Add Menu Item</h3>
+        <button class="modal-close" onclick="closeModal('modal-item')">&times;</button>
+      </div>
+      <form id="form-item">
+        <input type="hidden" id="item-form-id">
+        <div class="form-group">
+          <label class="form-label" for="item-form-cat">Category</label>
+          <select id="item-form-cat" class="form-control" required></select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="item-form-name">Item Name</label>
+            <input type="text" id="item-form-name" class="form-control" placeholder="e.g. Truffle Burrata" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-form-price">Price ($)</label>
+            <input type="number" step="0.01" min="0" id="item-form-price" class="form-control" placeholder="19.50" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="item-form-desc">Description & Ingredients</label>
+          <textarea id="item-form-desc" class="form-control" placeholder="Detailed description of the dish..."></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="item-form-dietary">Dietary Tags (Comma separated)</label>
+            <input type="text" id="item-form-dietary" class="form-control" placeholder="Vegetarian, Gluten-Free">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-form-allergens">Allergens (Comma separated)</label>
+            <input type="text" id="item-form-allergens" class="form-control" placeholder="Dairy, Nuts, Gluten">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="item-form-media">Media Image Asset</label>
+          <select id="item-form-media" class="form-control">
+            <option value="">-- No Image Attached --</option>
+          </select>
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
+          <label class="switch">
+            <input type="checkbox" id="item-form-avail" checked>
+            <span class="slider"></span>
+          </label>
+          <span style="font-size: 14px; font-weight: 600;">Available to Customers</span>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-item')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- QR Code Modal (Preview & Generate) -->
+  <div class="modal-overlay" id="modal-qr-preview">
+    <div class="modal-content" style="max-width: 460px; text-align: center;">
+      <div class="modal-header">
+        <h3 id="qr-modal-title">QR Code Preview</h3>
+        <button class="modal-close" onclick="closeModal('modal-qr-preview')">&times;</button>
+      </div>
+      <div style="background: #ffffff; padding: 20px; border-radius: 16px; display: inline-block; margin: 10px auto 20px;">
+        <img id="qr-modal-img" src="" alt="QR Code" style="width: 260px; height: 260px; display: block;">
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; word-break: break-all;" id="qr-modal-dest"></div>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <a id="qr-modal-download-btn" href="#" download="qr-code.png" class="btn btn-primary">💾 Download PNG</a>
+        <a id="qr-modal-test-btn" href="#" target="_blank" class="btn btn-secondary">🌐 Test Destination</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate QR Modal -->
+  <div class="modal-overlay" id="modal-qr-create">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>Generate Branch QR Code</h3>
+        <button class="modal-close" onclick="closeModal('modal-qr-create')">&times;</button>
+      </div>
+      <form id="form-qr-create">
+        <div class="form-group">
+          <label class="form-label" for="qr-create-branch">Target Branch</label>
+          <select id="qr-create-branch" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="qr-create-title">QR Code Title</label>
+          <input type="text" id="qr-create-title" class="form-control" placeholder="e.g. Downtown Main Dining QR">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-qr-create')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Generate QR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Media Upload Modal -->
+  <div class="modal-overlay" id="modal-media-upload">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>Upload Reusable Media Asset</h3>
+        <button class="modal-close" onclick="closeModal('modal-media-upload')">&times;</button>
+      </div>
+      <form id="form-media-upload">
+        <div class="form-group">
+          <label class="form-label" for="media-file-input">Select Image File (PNG, JPEG, WebP, SVG)</label>
+          <input type="file" id="media-file-input" class="form-control" accept="image/*" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="media-asset-type">Asset Type</label>
+          <select id="media-asset-type" class="form-control">
+            <option value="item_image">Menu Item Image</option>
+            <option value="logo">Restaurant Logo</option>
+            <option value="banner">Header Banner</option>
+            <option value="general">General Asset</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="media-alt-text">Alt Text / Label</label>
+          <input type="text" id="media-alt-text" class="form-control" placeholder="Short description of image">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-media-upload')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Upload Asset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script src="/admin/js/admin-app.js"></script>
+</body>
+</html>

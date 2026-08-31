@@ -1,5 +1,6 @@
 # ==============================================================================
 # RFSP Core Platform v1 — Staging Docker Compose Environment
+# PostgreSQL 16 + Node.js 24 LTS
 # ==============================================================================
 # Usage:
 #   docker compose -f docker-compose.staging.yml up -d --build
@@ -9,7 +10,7 @@
 version: '3.8'
 
 services:
-  # Staging PostgreSQL Database Container
+  # Staging PostgreSQL 16 Database Container
   staging-db:
     image: postgres:16-alpine
     container_name: rfsp-staging-db
@@ -29,7 +30,7 @@ services:
       retries: 10
       start_period: 5s
 
-  # RFSP Core Platform v1 Application Container
+  # RFSP Core Platform v1 Application Container (Node.js 24)
   rfsp-app:
     build:
       context: .
@@ -48,11 +49,12 @@ services:
       DATABASE_URL: postgresql://${PGUSER:-rfsp_staging}:${PGPASSWORD:-rfsp_staging_secure_pass_2026}@staging-db:5432/${PGDATABASE:-rfsp_staging}
       JWT_SECRET: ${JWT_SECRET:-staging_super_secure_jwt_secret_key_32bytes_minimum_2026}
       JWT_EXPIRES_IN: 24h
-      PUBLIC_MENU_BASE_URL: ${PUBLIC_MENU_BASE_URL:-http://localhost:3000/menu}
-      CORS_ORIGIN: "*"
+      PUBLIC_MENU_BASE_URL: ${PUBLIC_MENU_BASE_URL:-https://staging.aurabistro.com/menu}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://staging.aurabistro.com,http://localhost:3000}
       AUTO_SEED: "true"
       LOG_LEVEL: info
     volumes:
+      # Persistent Media Storage Volume (Survives container recreation/restarts)
       - media_uploads_staging:/app/public/uploads
 
 volumes:

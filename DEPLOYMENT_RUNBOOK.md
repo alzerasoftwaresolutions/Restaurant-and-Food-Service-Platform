@@ -17,14 +17,14 @@ This runbook provides complete operational guidance for deploying, configuring, 
                               │ HTTPS / Reverse Proxy (Nginx, Traefik, Caddy)
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│           RFSP Core Platform v1 (Node.js / Express)         │
+│           RFSP Core Platform v1 (Node.js 24 LTS / Express)  │
 │  - Evolutionary Modular Monolith (Stateless Service)        │
 │  - Port: 3000 (Configurable)                                │
 └─────────────────────────────────────────────────────────────┘
                               │ Connection Pool (pg.Pool / TCP 5432)
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 PostgreSQL 14+ Relational Engine            │
+│                 PostgreSQL 16 Relational Engine             │
 │  - Schema Migrations Table (schema_migrations)              │
 │  - 10 Core Tables & Relational Constraints                  │
 └─────────────────────────────────────────────────────────────┘
@@ -34,6 +34,7 @@ This runbook provides complete operational guidance for deploying, configuring, 
 * **Stateless Application Tier**: The Node.js application process stores no session state in memory (JWT authentication is stateless).
 * **Deterministic Migrations**: Schema updates are managed via versioned SQL migration scripts executed in sequential order.
 * **Separation of Environments**: `Development DB` $\neq$ `Staging DB` $\neq$ `Production DB`.
+* **Standardized Runtime**: **Node.js 24 LTS** and **PostgreSQL 16**.
 
 ---
 
@@ -46,27 +47,28 @@ The following environment variables govern application behavior. Configure them 
 | `NODE_ENV` | Yes | `development` | `development`, `staging`, `production` | Controls runtime safeguards, error verbosity, and strict startup checks. |
 | `HOST` | No | `0.0.0.0` | IP Address / Hostname | Network interface to bind the HTTP server. |
 | `PORT` | No | `3000` | Integer (1–65535) | TCP port for incoming HTTP traffic. |
-| `DATABASE_URL` | Staging/Prod | `null` | PostgreSQL Connection URI | Full connection URI (takes precedence over individual `PG*` variables). |
-| `PGHOST` | If no URL | `localhost` | Hostname / IP | PostgreSQL database host address. |
-| `PGPORT` | If no URL | `5432` | Integer (1–65535) | PostgreSQL database port. |
-| `PGUSER` | If no URL | `postgres` | String | PostgreSQL database username. |
-| `PGPASSWORD` | If no URL | `postgres` | String | PostgreSQL database password. |
-| `PGDATABASE` | If no URL | `rfsp_core_v1` | String | PostgreSQL database name. |
+| `DATABASE_URL` | Staging/Prod | `null` | PostgreSQL 16 Connection URI | Full connection URI (takes precedence over individual `PG*` variables). |
+| `PGHOST` | If no URL | `localhost` | Hostname / IP | PostgreSQL 16 database host address. |
+| `PGPORT` | If no URL | `5432` | Integer (1–65535) | PostgreSQL 16 database port. |
+| `PGUSER` | If no URL | `postgres` | String | PostgreSQL 16 database username. |
+| `PGPASSWORD` | If no URL | `postgres` | String | PostgreSQL 16 database password. |
+| `PGDATABASE` | If no URL | `rfsp_core_v1` | String | PostgreSQL 16 database name. |
 | `PGSSL` | No | `false` | `true`, `false` | Enable TLS/SSL connection for managed PostgreSQL instances. |
 | `PGPOOL_MAX` | No | `20` | Integer (1–100) | Maximum connections in the database connection pool. |
 | `JWT_SECRET` | Yes | Dev Default | String ($\ge 32$ chars) | Cryptographic signing key for authentication tokens. **Must be unique per env.** |
 | `JWT_EXPIRES_IN` | No | `24h` | Time String (`12h`, `24h`, `7d`) | Lifetime of issued authentication JWT tokens. |
 | `PUBLIC_MENU_BASE_URL` | Yes | `http://localhost:3000/menu` | Full URL | Canonical base URL embedded in generated QR codes. |
-| `CORS_ORIGIN` | No | `*` | `*` or comma-separated URLs | Allowed origins for cross-origin browser requests. |
+| `CORS_ORIGIN` | Staging | `http://localhost:3000` | Comma-separated URLs | Allowed origins for administrative APIs (e.g. `https://staging.aurabistro.com`). |
+| `UPLOAD_DIR` | No | `/app/public/uploads` | Filepath | Persistent directory path for uploaded media assets. |
 | `AUTO_SEED` | No | `true` (dev) / `false` | `true`, `false` | Automatically insert demo data on startup if users table is empty. |
 | `SHUTDOWN_TIMEOUT_MS`| No | `10000` | Integer (ms) | Maximum wait time for in-flight requests during graceful shutdown. |
 
 ---
 
-## 3. Database Setup & Migration Procedure
+## 3. Database Setup & Migration Procedure (PostgreSQL 16)
 
-### 3.1 Provisioning PostgreSQL (Staging)
-1. Create a dedicated staging PostgreSQL database instance (version 14 or higher):
+### 3.1 Provisioning PostgreSQL 16 (Staging)
+1. Create a dedicated staging PostgreSQL 16 database instance:
    ```sql
    CREATE DATABASE rfsp_staging;
    CREATE USER rfsp_staging_user WITH ENCRYPTED PASSWORD 'your_strong_password_here';
@@ -98,7 +100,10 @@ npm run db:verify
 1. Copy the staging environment configuration:
    ```bash
    cp .env.example .env
-   # Edit .env with your staging JWT_SECRET and settings
+   # Set NODE_ENV=staging
+   # Set JWT_SECRET=your_staging_secret_key_32_chars_long
+   # Set CORS_ORIGIN=https://staging.aurabistro.com
+   # Set PUBLIC_MENU_BASE_URL=https://staging.aurabistro.com/menu
    ```
 2. Build and start the staging stack in detached mode:
    ```bash
@@ -114,7 +119,7 @@ npm run db:verify
    ```
 
 ### Option B: Bare-Metal / Virtual Machine (Systemd)
-1. Install Node.js 22+ LTS on the target server.
+1. Install **Node.js 24 LTS** and **PostgreSQL 16** on the target server.
 2. Clone repository to `/opt/rfsp-core-platform`:
    ```bash
    git clone https://github.com/alzerasoftwaresolutions/Restaurant-and-Food-Service-Platform.git /opt/rfsp-core-platform
@@ -131,7 +136,9 @@ npm run db:verify
    HOST=0.0.0.0
    DATABASE_URL=postgresql://rfsp_staging_user:password@localhost:5432/rfsp_staging
    JWT_SECRET=your_32_character_staging_secret_key_here
-   PUBLIC_MENU_BASE_URL=https://staging.yourdomain.com/menu
+   CORS_ORIGIN=https://staging.aurabistro.com
+   PUBLIC_MENU_BASE_URL=https://staging.aurabistro.com/menu
+   UPLOAD_DIR=/opt/rfsp-core-platform/public/uploads
    ```
 5. Apply database migrations:
    ```bash
@@ -141,7 +148,7 @@ npm run db:verify
 6. Setup Systemd Service (`/etc/systemd/system/rfsp.service`):
    ```ini
    [Unit]
-   Description=RFSP Core Platform v1
+   Description=RFSP Core Platform v1 (Node.js 24)
    After=network.target postgresql.service
 
    [Service]
@@ -166,15 +173,32 @@ npm run db:verify
 
 ---
 
-## 5. Verification & Health Check
+## 5. Persistent Media Storage Verification
 
-### 5.1 Automated Endpoint Verification
+Uploaded media assets (restaurant logos, banners, food item photographs) must persist across container recreation, redeployment, and host reboots.
+
+### Docker Volume Persistence
+* `docker-compose.staging.yml` mounts the named volume `media_uploads_staging` to `/app/public/uploads`.
+* Verification protocol:
+  1. Upload an item image in `/admin`.
+  2. Recreate the application container:
+     ```bash
+     docker compose -f docker-compose.staging.yml up -d --force-recreate rfsp-app
+     ```
+  3. Access the uploaded image via browser or `curl -i http://localhost:3000/uploads/<filename>`.
+  4. The image returns HTTP 200 without data loss.
+
+---
+
+## 6. Verification & Health Check
+
+### 6.1 Automated Endpoint Verification
 Run the endpoint test script against the running server:
 ```bash
 npm run health:check
 ```
 
-### 5.2 Manual Health Check Probe
+### 6.2 Manual Health Check Probe
 Send a `GET` request to `/api/health`:
 ```bash
 curl -X GET http://localhost:3000/api/health
@@ -189,7 +213,7 @@ curl -X GET http://localhost:3000/api/health
   "environment": "staging",
   "database": {
     "status": "UP",
-    "engine": "PostgreSQL",
+    "engine": "PostgreSQL 16",
     "latencyMs": 4,
     "mode": "connection-pool"
   },
@@ -200,9 +224,9 @@ curl -X GET http://localhost:3000/api/health
 
 ---
 
-## 6. Rollback Procedures
+## 7. Rollback Procedures
 
-### 6.1 Application Code Rollback
+### 7.1 Application Code Rollback
 If a newly deployed code version exhibits issues:
 1. Revert to the previous Git commit or Docker image tag:
    ```bash
@@ -216,7 +240,7 @@ If a newly deployed code version exhibits issues:
    ```
 2. Verify `/api/health` status after rollback.
 
-### 6.2 Database Migration Rollback Considerations
+### 7.2 Database Migration Rollback Considerations
 * Core Platform v1 migrations are additive.
 * If a rollback requires altering the schema:
   - Do NOT modify applied migration scripts directly in production/staging.
@@ -225,32 +249,28 @@ If a newly deployed code version exhibits issues:
 
 ---
 
-## 7. Database Backup & Disaster Recovery
+## 8. Database Backup & Disaster Recovery (PostgreSQL 16)
 
-### 7.1 Creating a Database Backup (`pg_dump`)
-Run a logical backup of the staging/production database before performing any upgrade:
+### 8.1 Creating a Database Backup (`pg_dump`)
+Run a logical backup of the PostgreSQL 16 staging database:
 ```bash
 pg_dump -h localhost -U rfsp_staging_user -d rfsp_staging -F c -b -v -f "/var/backups/rfsp_staging_$(date +%Y%m%d_%H%M%S).dump"
 ```
 
-### 7.2 Restoring from a Backup (`pg_restore`)
-To restore the database to a known state:
+### 8.2 Restoring from a Backup (`pg_restore`)
+To restore the database:
 ```bash
-pg_restore -h localhost -U rfsp_staging_user -d rfsp_staging --clean --if-exists -v "/var/backups/rfsp_staging_20260901_000000.dump"
+pg_restore -h localhost -U rfsp_staging_user -d rfsp_staging --clean --if-exists -v "/var/backups/rfsp_staging_backup.dump"
 ```
-
-### 7.3 Backup Retention Policy
-* **Staging**: Weekly full backups retained for 14 days.
-* **Production Recommendation**: Daily full backups + Continuous WAL archiving (Point-in-Time Recovery / PITR) retained for 30 days.
 
 ---
 
-## 8. Troubleshooting Guidance
+## 9. Troubleshooting Guidance
 
 ### Issue 1: Database Connection Refused
 * **Symptoms**: Application fails to start with `PostgreSQL connection failed in staging mode: connect ECONNREFUSED`.
 * **Remediation**:
-  1. Verify PostgreSQL service is active: `sudo systemctl status postgresql` or `docker ps`.
+  1. Verify PostgreSQL 16 service is active: `sudo systemctl status postgresql` or `docker ps`.
   2. Verify network reachability: `nc -zv $PGHOST $PGPORT` or `telnet $PGHOST $PGPORT`.
   3. Verify PostgreSQL configuration in `pg_hba.conf` allows connections from the application host IP.
 
@@ -260,7 +280,6 @@ pg_restore -h localhost -U rfsp_staging_user -d rfsp_staging --clean --if-exists
   1. Check `JWT_SECRET`: Must be set and contain $\ge 32$ characters in staging/production.
   2. Check `DATABASE_URL`: Ensure valid credentials and database name are provided.
 
-### Issue 3: In-Flight Request Drops during Deployment
-* **Symptoms**: Active user requests receive connection resets during process restart.
-* **Remediation**:
-  - The application implements graceful shutdown listening for `SIGTERM`. Ensure your reverse proxy / container manager allows at least 10 seconds (`SHUTDOWN_TIMEOUT_MS`) before sending `SIGKILL`.
+### Issue 3: CORS Rejection for Admin Console
+* **Symptoms**: Admin console requests fail with CORS policy error in browser console.
+* **Remediation**: Ensure `CORS_ORIGIN` contains the exact scheme, host, and port of the staging frontend (e.g. `CORS_ORIGIN=https://staging.aurabistro.com`).

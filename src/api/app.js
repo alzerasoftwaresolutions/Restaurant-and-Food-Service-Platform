@@ -29,11 +29,33 @@ export function createApp() {
     app.set('trust proxy', 1);
   }
 
-  // Basic middleware
-  app.use(cors({
-    origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(',').map(s => s.trim()),
-    credentials: true
-  }));
+  // Dynamic CORS Configuration:
+  // - Public endpoints (/api/v1/public/*, /api/health) permit open customer access
+  // - Protected administration APIs validate against environment-configured CORS_ORIGIN
+  const allowedOrigins = config.corsOrigin === '*'
+    ? '*'
+    : config.corsOrigin.split(',').map(s => s.trim().replace(/\/+$/, ''));
+
+  const corsOptionsDelegate = (req, callback) => {
+    const origin = req.header('Origin');
+    const isPublicRoute = req.path.startsWith('/api/v1/public') || req.path === '/api/health';
+
+    if (isPublicRoute) {
+      // Public customer read access
+      callback(null, { origin: true, credentials: false });
+    } else if (!origin || allowedOrigins === '*') {
+      // Same-origin, server-to-server, or wildcard configured
+      callback(null, { origin: true, credentials: true });
+    } else if (Array.isArray(allowedOrigins) && allowedOrigins.includes(origin)) {
+      // Explicit allowed staging / production origin
+      callback(null, { origin: true, credentials: true });
+    } else {
+      // Unauthorized origin rejected for administrative API mutations
+      callback(null, { origin: false });
+    }
+  };
+
+  app.use(cors(corsOptionsDelegate));
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
@@ -53,7 +75,7 @@ export function createApp() {
       environment: config.env,
       database: {
         status: dbHealth.status,
-        engine: dbHealth.engine || 'PostgreSQL',
+        engine: dbHealth.engine || 'PostgreSQL 16',
         latencyMs: dbHealth.latencyMs,
         mode: dbHealth.mode
       },

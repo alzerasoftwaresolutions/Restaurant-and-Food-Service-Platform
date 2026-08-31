@@ -1,9 +1,10 @@
 # ==============================================================================
 # RFSP Core Platform v1 — Multi-Stage Production & Staging Dockerfile
+# Standardized on Node.js 24 LTS
 # ==============================================================================
 
 # --- Stage 1: Build & Dependencies ---
-FROM node:22-alpine AS dependencies
+FROM node:24-alpine AS dependencies
 
 WORKDIR /app
 
@@ -14,15 +15,15 @@ COPY package.json package-lock.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # --- Stage 2: Production Runtime ---
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+ENV NODE_ENV=staging
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-# Create media uploads directory with appropriate permissions
+# Create media uploads directory with appropriate permissions for persistent volume mounting
 RUN mkdir -p /app/public/uploads && chown -R node:node /app
 
 # Copy production node_modules from dependencies stage

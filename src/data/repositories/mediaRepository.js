@@ -41,12 +41,14 @@ export const mediaRepository = {
   },
 
   async getAssetUsageCount(mediaId) {
-    const sql = `
-      SELECT
-        (SELECT COUNT(*) FROM restaurants WHERE logo_media_id = $1 OR banner_media_id = $1) +
-        (SELECT COUNT(*) FROM menu_items WHERE media_id = $1) AS total_count
-    `;
-    const res = await queryOne(sql, [mediaId]);
-    return Number(res?.total_count || 0);
+    const restRes = await queryOne(
+      'SELECT COUNT(*) AS count FROM restaurants WHERE logo_media_id = $1 OR banner_media_id = $1',
+      [mediaId]
+    );
+    const itemRes = await queryOne(
+      'SELECT COUNT(*) AS count FROM menu_items WHERE media_id = $1',
+      [mediaId]
+    );
+    return Number(restRes?.count || 0) + Number(itemRes?.count || 0);
   }
 };

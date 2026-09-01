@@ -100,24 +100,47 @@ export const organizationRepository = {
 
   async listBranchesByRestaurant(restaurantId) {
     const sql = `
-      SELECT b.*, r.name AS restaurant_name
+      SELECT b.*,
+             r.name AS restaurant_name,
+             COALESCE(mba.assigned_menu_count, 0) AS assigned_menu_count
       FROM branches b
       JOIN restaurants r ON r.id = b.restaurant_id
+      LEFT JOIN (
+        SELECT branch_id, COUNT(*) AS assigned_menu_count
+        FROM menu_branch_assignments
+        WHERE is_active = 1
+        GROUP BY branch_id
+      ) mba ON mba.branch_id = b.id
       WHERE b.restaurant_id = $1
       ORDER BY b.name ASC
     `;
-    return queryAll(sql, [restaurantId]);
+    const rows = await queryAll(sql, [restaurantId]);
+    return rows.map(r => ({
+      ...r,
+      assigned_menu_count: Number(r.assigned_menu_count || 0)
+    }));
   },
 
   async listAllBranches() {
     const sql = `
-      SELECT b.*, r.name AS restaurant_name,
-             (SELECT COUNT(*) FROM menu_branch_assignments mba WHERE mba.branch_id = b.id AND mba.is_active = 1) AS assigned_menu_count
+      SELECT b.*,
+             r.name AS restaurant_name,
+             COALESCE(mba.assigned_menu_count, 0) AS assigned_menu_count
       FROM branches b
       JOIN restaurants r ON r.id = b.restaurant_id
+      LEFT JOIN (
+        SELECT branch_id, COUNT(*) AS assigned_menu_count
+        FROM menu_branch_assignments
+        WHERE is_active = 1
+        GROUP BY branch_id
+      ) mba ON mba.branch_id = b.id
       ORDER BY b.name ASC
     `;
-    return queryAll(sql);
+    const rows = await queryAll(sql);
+    return rows.map(r => ({
+      ...r,
+      assigned_menu_count: Number(r.assigned_menu_count || 0)
+    }));
   },
 
   async createBranch(branch) {

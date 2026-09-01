@@ -1,3 +1,5 @@
+process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+
 import { createApp } from '../src/api/app.js';
 import { runSeed } from '../src/data/seed.js';
 

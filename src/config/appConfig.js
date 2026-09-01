@@ -7,8 +7,14 @@ const rootDir = path.resolve(__dirname, '../../');
 
 const DEFAULT_DEV_JWT_SECRET = 'rfsp_core_v1_super_secure_jwt_secret_key_2026';
 
+const isRunningInTest = Boolean(
+  process.env.NODE_ENV === 'test' ||
+  process.execArgv.some(arg => arg.includes('--test')) ||
+  process.argv.some(arg => arg.includes('.test.js') || arg === '--test')
+);
+
 export const config = {
-  env: process.env.NODE_ENV || 'development',
+  env: process.env.NODE_ENV || (isRunningInTest ? 'test' : 'development'),
   host: process.env.HOST || '0.0.0.0',
   port: parseInt(process.env.PORT, 10) || 3000,
   logLevel: process.env.LOG_LEVEL || 'info',

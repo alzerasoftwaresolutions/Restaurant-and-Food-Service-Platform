@@ -9,17 +9,23 @@ let inMemoryDb = null;
 let isInMemoryMode = false;
 
 /**
- * Initialize or retrieve the PostgreSQL connection pool
+ * Initialize or retrieve the PostgreSQL connection pool.
+ *
+ * Architecture Rule:
+ * - Development: PostgreSQL (Real database connection required)
+ * - Staging:     PostgreSQL (Real database connection required)
+ * - Production:  PostgreSQL (Real database connection required)
+ * - Test Suite:  pg-mem in-memory adapter (isolated test-only fallback)
  */
 export async function getDb() {
   if (poolInstance) {
     return poolInstance;
   }
 
-  const isStrictEnv = config.env === 'staging' || config.env === 'production';
-  const hasRealConfig = Boolean(process.env.DATABASE_URL || process.env.PGHOST || isStrictEnv);
+  const isTestEnv = config.env === 'test' || process.env.NODE_ENV === 'test';
 
-  if (hasRealConfig) {
+  // 1. Production, Staging, and Development: Connect to PostgreSQL
+  if (!isTestEnv || process.env.DATABASE_URL || process.env.PGHOST) {
     try {
       const poolConfig = config.database.url
         ? {
@@ -58,15 +64,20 @@ export async function getDb() {
       console.log(`[Database] Connected to PostgreSQL at ${config.database.host}:${config.database.port}/${config.database.database} (Pool Max: ${config.database.pool.max})`);
       return poolInstance;
     } catch (err) {
-      if (isStrictEnv) {
+      if (!isTestEnv) {
+        // In development, staging, or production, do NOT silently fall back to another engine.
         console.error(`[Database Critical Error] Failed to connect to PostgreSQL in ${config.env} environment:`, err.message);
-        throw new Error(`PostgreSQL connection failed in ${config.env} mode: ${err.message}`);
+        throw new Error(
+          `PostgreSQL connection failed in ${config.env} mode (${config.database.host}:${config.database.port}/${config.database.database}): ${err.message}. ` +
+          `Ensure PostgreSQL is running and reachable. For local development, start PostgreSQL or check your connection parameters in .env.`
+        );
       }
-      console.warn(`[Database] PostgreSQL daemon not reachable at ${config.database.host}:${config.database.port}. Falling back to embedded in-memory PostgreSQL engine for development:`, err.message);
+      // If in test environment and connection failed, fall through to test-only pg-mem adapter
+      console.warn(`[Database Test Suite] PostgreSQL server not active on ${config.database.host}:${config.database.port}. Using test-only pg-mem in-memory adapter for test suite.`);
     }
   }
 
-  // Fallback to in-memory PostgreSQL engine (pg-mem) for development / testing
+  // 2. Test Suite Only: Initialize pg-mem in-memory adapter
   if (!inMemoryDb) {
     inMemoryDb = newDb();
     inMemoryDb.public.registerFunction({
@@ -77,13 +88,13 @@ export async function getDb() {
     inMemoryDb.public.registerFunction({
       name: 'current_database',
       returns: inMemoryDb.public.getType('text'),
-      implementation: () => 'rfsp_core_v1_memory'
+      implementation: () => 'rfsp_core_v1_test_memory'
     });
 
     const adapter = inMemoryDb.adapters.createPg();
     poolInstance = new adapter.Pool();
     isInMemoryMode = true;
-    console.log('[Database] Initialized PostgreSQL engine (in-memory mode for test/standalone execution)');
+    console.log('[Database] Initialized test-only in-memory PostgreSQL emulator (pg-mem)');
   }
 
   return poolInstance;
@@ -105,7 +116,7 @@ export async function checkDbHealth() {
         status: 'UP',
         latencyMs,
         engine: 'PostgreSQL',
-        mode: isInMemoryMode ? 'in-memory-adapter' : 'connection-pool',
+        mode: isInMemoryMode ? 'in-memory-test-adapter' : 'connection-pool',
         pool: isInMemoryMode ? null : {
           total: pool.totalCount,
           idle: pool.idleCount,

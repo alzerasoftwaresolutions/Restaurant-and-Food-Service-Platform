@@ -1,9 +1,20 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../../');
+
+// Automatically load .env file if present in workspace root (Node.js 20.6.0+ built-in)
+const envFilePath = path.join(rootDir, '.env');
+if (fs.existsSync(envFilePath) && typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile(envFilePath);
+  } catch (err) {
+    console.warn('[Config] Notice: Could not parse .env file:', err.message);
+  }
+}
 
 const DEFAULT_DEV_JWT_SECRET = 'rfsp_core_v1_super_secure_jwt_secret_key_2026';
 

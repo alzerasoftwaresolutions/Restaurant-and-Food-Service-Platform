@@ -3,7 +3,7 @@
 ## Overview
 **RFSP Core Platform v1** is the foundational digital-menu capability of the Restaurant & Food Service Platform. It provides a complete, modular, enterprise-architected system enabling restaurant administrators to manage organizations, branches, digital menus, categories, menu items, media assets, and QR codes, while providing customers with a fast, mobile-responsive, zero-authentication digital menu experience.
 
-The system uses **PostgreSQL** as the core database engine to ensure high concurrency, relational integrity, and seamless future evolution into transactional domains (Orders, POS, Kitchen, Inventory).
+The system uses **PostgreSQL 16** as the core database engine to ensure high concurrency, relational integrity, and seamless future evolution into transactional domains (Orders, POS, Kitchen, Inventory).
 
 This implementation strictly complies with:
 1. `EDA-001` — Enterprise Domain Architecture
@@ -43,7 +43,7 @@ This implementation strictly complies with:
 │       Platform Services       │ │        Data Layer         │
 │  - Identity & Access          │ │  - Schema & Migrations    │
 │  - Media Management           │ │  - Domain Repositories    │
-│  - Audit Logging              │ │  - PostgreSQL Engine      │
+│  - Audit Logging              │ │  - PostgreSQL 16 Engine   │
 │  - Configuration              │ │    (ANSI SQL / Pooled)    │
 └───────────────────────────────┘ └───────────────────────────┘
 ```
@@ -71,12 +71,12 @@ This implementation strictly complies with:
 ### 4. Media Management (Platform Service)
 * Multi-format image asset uploads (PNG, JPEG, WebP, SVG).
 * File size constraints and MIME type validation.
-* Reusable media library with usage tracking across restaurants and menu items.
+* Reusable media library with persistent volume disk storage.
 
 ### 5. QR Publishing (Core Publishing Capability)
 * High-resolution QR code image generation (PNG data URI) for branch destinations.
 * QR code lifecycle management (`Active`, `Disabled`, `Expired`).
-* Public QR resolution handler with seamless redirect to `/menu/:branchSlug`.
+* Public QR resolution handler with canonical HTTP 302 redirect to `/menu/:branchSlug`.
 
 ### 6. Customer Digital Menu (Client Experience)
 * Canonical public route: `/menu/:branchSlug`.
@@ -97,21 +97,6 @@ This implementation strictly complies with:
 
 ---
 
-## Database & Migration System
-
-### PostgreSQL Schema
-* Located in `src/data/migrations/001_initial_core_schema.sql`.
-* Managed deterministically by the migration runner (`src/data/migrator.js`).
-* Automatically applies migrations upon server startup and seeds initial administrator credentials if the database is empty.
-
-### Connection Configuration
-Configurable via environment variables (or `.env` file):
-* `DATABASE_URL`: Full PostgreSQL connection URI (e.g. `postgresql://user:pass@host:5432/dbname`)
-* `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSL`
-* Fully supports real PostgreSQL daemons as well as an embedded PostgreSQL engine for test environments.
-
----
-
 ## Strictly Excluded Capabilities (Core v1 Boundary)
 The following are strictly out of scope for Core Platform v1:
 * No Customer Ordering, Cart, Checkout, Payments, or Billing.
@@ -126,47 +111,116 @@ The following are strictly out of scope for Core Platform v1:
 
 ---
 
-## Getting Started
+## Local Development Setup Guide
 
-### Prerequisites
-* Node.js v24+ (or Node.js v22+ with ES modules)
-* npm 10+
-* (Optional) PostgreSQL 14+ instance
+> [!IMPORTANT]
+> **Working Directory**: All commands must be executed from the **repository root directory**:
+> ```text
+> C:\Users\Natha\Desktop\Restaurant & Food Service Platform
+> ```
+> Do NOT execute commands from inside the `src/` folder.
 
-### Installation
-```bash
-npm install
+### 1. Prerequisites
+* **Node.js**: `v24 LTS` (or Node.js `v20.6.0+` with native `.env` loading)
+* **npm**: `v10+`
+* **PostgreSQL**: `v16` (or `v14+`) running locally on port `5432`
+
+---
+
+### 2. Create PostgreSQL Database
+In your local PostgreSQL instance (via `psql` or pgAdmin), create the database:
+```sql
+CREATE DATABASE rfsp_core_v1;
 ```
 
-### Run Migrations & Seed Initial Demo Data
+*(Optional Recommended)* Create a dedicated development application user:
+```sql
+CREATE USER rfsp_app WITH ENCRYPTED PASSWORD 'your_secure_dev_password';
+GRANT ALL PRIVILEGES ON DATABASE rfsp_core_v1 TO rfsp_app;
+ALTER DATABASE rfsp_core_v1 OWNER TO rfsp_app;
+```
+
+---
+
+### 3. Configure Local `.env`
+Create a `.env` file in the project root by copying `.env.example`:
 ```bash
+cp .env.example .env
+```
+
+Edit `.env` to supply your local PostgreSQL password:
+```env
+NODE_ENV=development
+HOST=0.0.0.0
+PORT=3000
+
+# Local PostgreSQL Connection
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=YOUR_ACTUAL_LOCAL_POSTGRES_PASSWORD
+PGDATABASE=rfsp_core_v1
+PGSSL=false
+
+# Security & Publishing
+JWT_SECRET=rfsp_core_v1_super_secure_jwt_secret_key_2026
+PUBLIC_MENU_BASE_URL=http://localhost:3000/menu
+AUTO_SEED=true
+```
+
+> [!NOTE]
+> `.env` is listed in `.gitignore` and must never be committed to source control.
+
+---
+
+### 4. Database Setup & Verification Commands
+
+Execute the following sequential verification commands from the project root:
+
+```bash
+# 1. Verify PostgreSQL connection and schema status
+npm run db:verify
+
+# 2. Run deterministic database migrations
+npm run migrate
+
+# 3. Seed initial demonstration data (Admin, Manager, Restaurant, Branches, Menus, QR)
 npm run seed
-```
-* **Admin User**: `admin` / `AdminPass123!`
-* **Manager User**: `manager` / `ManagerPass123!`
-* **Demo Restaurant**: Aura Artisan Bistro (`aura-artisan-bistro`)
-* **Demo Branches**:
-  - Downtown Flagship (`downtown-flagship`)
-  - Westside Promenade (`westside-promenade`)
 
-### Run Development Server
-```bash
-npm start
+# 4. Verify live HTTP endpoints
+npm run health:check
+
+# 5. Run full automated test suite (46 tests)
+npm test
+
+# 6. Start local development server with auto-reload
+npm run dev
 ```
+
+---
+
+### 5. Application Endpoints
+
+Once the development server is running:
 * **Administration Console**: `http://localhost:3000/admin`
+  * **Admin Login**: `admin` / `AdminPass123!`
+  * **Manager Login**: `manager` / `ManagerPass123!`
 * **Customer Digital Menu**: `http://localhost:3000/menu/downtown-flagship`
-* **QR Scan Resolution**: `http://localhost:3000/qr/QR_DT01_MAIN`
-* **Health Check API**: `http://localhost:3000/api/health`
+* **QR Resolution Handler**: `http://localhost:3000/qr/QR_DT01_MAIN`
+* **System Health API**: `http://localhost:3000/api/health`
 
-### Run Automated Tests
+---
+
+## Automated Test Suites
+
 ```bash
 npm test
 ```
-Executes all 7 automated test suites:
-- `tests/identity.test.js`: Authentication, password hashing, JWT tokens, RBAC.
-- `tests/organization.test.js`: Restaurant and branch lifecycle.
-- `tests/menu.test.js`: Menus, categories, items, assignments, availability.
-- `tests/publishing.test.js`: Authoritative publishing logic and availability filters.
-- `tests/qr.test.js`: QR code creation, status lifecycle, destination resolution.
-- `tests/audit.test.js`: Structured administrative action audit logs.
-- `tests/e2e.test.js`: Full end-to-end integration workflow.
+Executes all 7 domain test suites using isolated in-memory testing adapter:
+1. `tests/identity.test.js`: Authentication, password hashing, JWT tokens, RBAC.
+2. `tests/organization.test.js`: Restaurant, branch lifecycle, and branch query counts.
+3. `tests/menu.test.js`: Menus, categories, items, assignments, availability.
+4. `tests/publishing.test.js`: Authoritative publishing logic and availability filters.
+5. `tests/qr.test.js`: QR code creation, status lifecycle, destination resolution.
+6. `tests/audit.test.js`: Structured administrative action audit logs.
+7. `tests/e2e.test.js`: Full end-to-end integration workflow.

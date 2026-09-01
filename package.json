@@ -8,12 +8,12 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "migrate": "node src/data/run-migrations.js",
-    "seed": "node src/data/seed.js",
-    "db:verify": "node src/data/verify-db.js",
-    "health:check": "node tests/verify_endpoints.js",
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --env-file-if-exists=.env --watch src/server.js",
+    "migrate": "node --env-file-if-exists=.env src/data/run-migrations.js",
+    "seed": "node --env-file-if-exists=.env src/data/seed.js",
+    "db:verify": "node --env-file-if-exists=.env src/data/verify-db.js",
+    "health:check": "node --env-file-if-exists=.env tests/verify_endpoints.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js"
   },
   "keywords": [

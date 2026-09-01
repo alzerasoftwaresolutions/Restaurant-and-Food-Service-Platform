@@ -58,7 +58,8 @@ test('Menu Management — Business Domain Suite', async (t) => {
     });
 
     assert.ok(testItem.id);
-    assert.equal(testItem.price, 24.50);
+    // Monetary Contract: Exact 2-decimal string representation ("24.50")
+    assert.equal(testItem.price, '24.50');
     assert.equal(testItem.is_available, 1);
   });
 

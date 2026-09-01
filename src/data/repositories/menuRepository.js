@@ -1,6 +1,20 @@
 import { queryOne, queryAll, execute, withTransaction } from '../db.js';
 
 /**
+ * Normalizes a menu item record to ensure exact 2-decimal string monetary representation ("XX.YY")
+ * compliant with RFSP Core Platform v1 decimal money contract.
+ */
+function normalizeMenuItem(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    price: row.price !== undefined && row.price !== null
+      ? (typeof row.price === 'number' ? row.price.toFixed(2) : Number(row.price).toFixed(2))
+      : '0.00'
+  };
+}
+
+/**
  * Menu Management — PostgreSQL Repository
  */
 export const menuRepository = {
@@ -175,7 +189,8 @@ export const menuRepository = {
       LEFT JOIN media_assets m ON m.id = mi.media_id
       WHERE mi.id = $1
     `;
-    return queryOne(sql, [id]);
+    const row = await queryOne(sql, [id]);
+    return normalizeMenuItem(row);
   },
 
   async listMenuItemsByCategory(categoryId) {
@@ -186,7 +201,8 @@ export const menuRepository = {
       WHERE mi.category_id = $1
       ORDER BY mi.display_order ASC, mi.name ASC
     `;
-    return queryAll(sql, [categoryId]);
+    const rows = await queryAll(sql, [categoryId]);
+    return rows.map(normalizeMenuItem);
   },
 
   async listMenuItemsByMenu(menuId) {
@@ -198,7 +214,8 @@ export const menuRepository = {
       WHERE c.menu_id = $1
       ORDER BY c.display_order ASC, mi.display_order ASC, mi.name ASC
     `;
-    return queryAll(sql, [menuId]);
+    const rows = await queryAll(sql, [menuId]);
+    return rows.map(normalizeMenuItem);
   },
 
   async createMenuItem(item) {
@@ -210,12 +227,12 @@ export const menuRepository = {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *
     `;
-    return queryOne(sql, [
+    const row = await queryOne(sql, [
       item.id,
       item.categoryId,
       item.name,
       item.description || null,
-      item.price,
+      typeof item.price === 'number' ? item.price.toFixed(2) : item.price,
       item.currency || 'USD',
       item.dietaryFlags || null,
       item.allergens || null,
@@ -223,6 +240,7 @@ export const menuRepository = {
       item.isAvailable !== undefined ? (item.isAvailable ? 1 : 0) : 1,
       item.displayOrder || 0
     ]);
+    return normalizeMenuItem(row);
   },
 
   async updateMenuItem(id, updates) {
@@ -242,10 +260,10 @@ export const menuRepository = {
       WHERE id = $11
       RETURNING *
     `;
-    return queryOne(sql, [
+    const row = await queryOne(sql, [
       updates.name || null,
       updates.description || null,
-      updates.price !== undefined ? updates.price : null,
+      updates.price !== undefined ? (typeof updates.price === 'number' ? updates.price.toFixed(2) : updates.price) : null,
       updates.currency || null,
       updates.dietaryFlags !== undefined ? updates.dietaryFlags : null,
       updates.allergens !== undefined ? updates.allergens : null,
@@ -255,6 +273,7 @@ export const menuRepository = {
       updates.categoryId || null,
       id
     ]);
+    return normalizeMenuItem(row);
   },
 
   async deleteMenuItem(id) {
@@ -268,7 +287,8 @@ export const menuRepository = {
       WHERE id = $2
       RETURNING *
     `;
-    return queryOne(sql, [isAvailable ? 1 : 0, id]);
+    const row = await queryOne(sql, [isAvailable ? 1 : 0, id]);
+    return normalizeMenuItem(row);
   },
 
   // --- Assignments ---
@@ -405,7 +425,7 @@ export const menuRepository = {
           name: cat.name,
           description: cat.description,
           displayOrder: cat.display_order,
-          items
+          items: items.map(normalizeMenuItem)
         });
       }
 

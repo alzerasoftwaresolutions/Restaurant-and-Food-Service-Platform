@@ -26,8 +26,10 @@ test('End-to-End Core Platform v1 Flow Suite', async (t) => {
     });
   });
 
-  t.after(() => {
-    server.close();
+  t.after(async () => {
+    if (server) {
+      await new Promise(resolve => server.close(resolve));
+    }
   });
 
   let adminToken = null;
@@ -218,7 +220,8 @@ test('End-to-End Core Platform v1 Flow Suite', async (t) => {
 
     const salmonItem = menuRes.data.data.menus[0].categories[0].items[0];
     assert.equal(salmonItem.name, 'King Salmon Risotto');
-    assert.equal(salmonItem.price, 36.00);
+    // Monetary Contract: Exact 2-decimal string representation ("36.00")
+    assert.equal(salmonItem.price, '36.00');
     assert.equal(salmonItem.dietary_flags, 'Gluten-Free');
   });
 

@@ -358,7 +358,7 @@ test('=== RFSP Core Platform v1 — Comprehensive Staging Validation Suite ===',
       });
       assert.equal(itemRes1.status, 201);
       stagingItem1 = itemRes1.data.data;
-      assert.equal(stagingItem1.price, 26.00);
+      assert.equal(stagingItem1.price, '26.00');
 
       // Create a second item intentionally marked Unavailable
       const itemRes2 = await api('/api/v1/menu-items', {

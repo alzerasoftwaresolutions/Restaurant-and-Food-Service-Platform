@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/api/app.js';
 import { runSeed } from '../src/data/seed.js';
+import { queryOne } from '../src/data/db.js';
 
 test('End-to-End Core Platform v1 Flow Suite', async (t) => {
   await runSeed();
@@ -41,6 +42,16 @@ test('End-to-End Core Platform v1 Flow Suite', async (t) => {
   let createdCatId = null;
   let createdItemId = null;
   let createdQrCode = null;
+
+  await t.test('0. Database Isolation Verification', async () => {
+    const dbInfo = await queryOne('SELECT current_database() AS db_name');
+    assert.ok(dbInfo, 'Must return current database');
+    assert.ok(
+      dbInfo.db_name === 'rfsp_core_v1_test' || dbInfo.db_name === 'rfsp_core_v1_test_memory',
+      `Test suite must connect to isolated test database, but got: ${dbInfo.db_name}`
+    );
+    assert.notEqual(dbInfo.db_name, 'rfsp_core_v1', 'Test suite must NEVER connect to development database rfsp_core_v1');
+  });
 
   await t.test('1. Admin Logs in via API', async () => {
     const res = await makeRequest('/api/v1/auth/login', {
@@ -220,7 +231,7 @@ test('End-to-End Core Platform v1 Flow Suite', async (t) => {
 
     const salmonItem = menuRes.data.data.menus[0].categories[0].items[0];
     assert.equal(salmonItem.name, 'King Salmon Risotto');
-    // Monetary Contract: Exact 2-decimal string representation ("36.00")
+    // Monetary Contract: Exact decimal string representation ("36.00")
     assert.equal(salmonItem.price, '36.00');
     assert.equal(salmonItem.dietary_flags, 'Gluten-Free');
   });

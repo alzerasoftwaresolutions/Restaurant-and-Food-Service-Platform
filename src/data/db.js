@@ -12,10 +12,11 @@ let isInMemoryMode = false;
  * Initialize or retrieve the PostgreSQL connection pool.
  *
  * Architecture Rule:
- * - Development: PostgreSQL (Real database connection required)
- * - Staging:     PostgreSQL (Real database connection required)
- * - Production:  PostgreSQL (Real database connection required)
- * - Test Suite:  pg-mem in-memory adapter (isolated test-only fallback)
+ * - Development: PostgreSQL (Target: rfsp_core_v1)
+ * - Staging:     PostgreSQL (Target: rfsp_staging)
+ * - Production:  PostgreSQL (Target: production db)
+ * - Test Suite:  PostgreSQL Test Database (Target: rfsp_core_v1_test)
+ *                with isolated fallback to pg-mem emulator only if test DB unreachable.
  */
 export async function getDb() {
   if (poolInstance) {
@@ -23,9 +24,10 @@ export async function getDb() {
   }
 
   const isTestEnv = config.env === 'test' || process.env.NODE_ENV === 'test';
+  const targetDatabase = config.database.database;
 
-  // 1. Production, Staging, and Development: Connect to PostgreSQL
-  if (!isTestEnv || process.env.DATABASE_URL || process.env.PGHOST) {
+  // 1. Production, Staging, Development, and PostgreSQL Test Database
+  if (!isTestEnv || process.env.PGHOST || process.env.DATABASE_URL || config.database.host) {
     try {
       const poolConfig = config.database.url
         ? {
@@ -40,7 +42,7 @@ export async function getDb() {
             port: config.database.port,
             user: config.database.user,
             password: config.database.password,
-            database: config.database.database,
+            database: targetDatabase,
             ssl: config.database.ssl,
             max: config.database.pool.max,
             idleTimeoutMillis: config.database.pool.idleTimeoutMillis,
@@ -61,19 +63,19 @@ export async function getDb() {
         console.error('[Database Pool Error] Unexpected idle client error:', err.message);
       });
 
-      console.log(`[Database] Connected to PostgreSQL at ${config.database.host}:${config.database.port}/${config.database.database} (Pool Max: ${config.database.pool.max})`);
+      console.log(`[Database] Connected to PostgreSQL at ${config.database.host}:${config.database.port}/${targetDatabase} (Pool Max: ${config.database.pool.max})`);
       return poolInstance;
     } catch (err) {
       if (!isTestEnv) {
         // In development, staging, or production, do NOT silently fall back to another engine.
         console.error(`[Database Critical Error] Failed to connect to PostgreSQL in ${config.env} environment:`, err.message);
         throw new Error(
-          `PostgreSQL connection failed in ${config.env} mode (${config.database.host}:${config.database.port}/${config.database.database}): ${err.message}. ` +
+          `PostgreSQL connection failed in ${config.env} mode (${config.database.host}:${config.database.port}/${targetDatabase}): ${err.message}. ` +
           `Ensure PostgreSQL is running and reachable. For local development, start PostgreSQL or check your connection parameters in .env.`
         );
       }
       // If in test environment and connection failed, fall through to test-only pg-mem adapter
-      console.warn(`[Database Test Suite] PostgreSQL server not active on ${config.database.host}:${config.database.port}. Using test-only pg-mem in-memory adapter for test suite.`);
+      console.warn(`[Database Test Suite] PostgreSQL test database not reachable at ${config.database.host}:${config.database.port}/${targetDatabase}: ${err.message}. Using test-only pg-mem in-memory adapter.`);
     }
   }
 
@@ -116,6 +118,7 @@ export async function checkDbHealth() {
         status: 'UP',
         latencyMs,
         engine: 'PostgreSQL',
+        database: config.database.database,
         mode: isInMemoryMode ? 'in-memory-test-adapter' : 'connection-pool',
         pool: isInMemoryMode ? null : {
           total: pool.totalCount,
@@ -193,9 +196,12 @@ export async function withTransaction(callback) {
  */
 export async function closeDb() {
   if (poolInstance) {
-    console.log('[Database] Closing PostgreSQL connection pool...');
-    await poolInstance.end();
+    if (!isInMemoryMode && typeof poolInstance.end === 'function') {
+      console.log('[Database] Closing PostgreSQL connection pool...');
+      await poolInstance.end();
+    }
     poolInstance = null;
   }
   inMemoryDb = null;
+  isInMemoryMode = false;
 }

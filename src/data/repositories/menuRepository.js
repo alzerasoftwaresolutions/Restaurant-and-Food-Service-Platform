@@ -1,16 +1,26 @@
 import { queryOne, queryAll, execute, withTransaction } from '../db.js';
 
 /**
- * Normalizes a menu item record to ensure exact 2-decimal string monetary representation ("XX.YY")
- * compliant with RFSP Core Platform v1 decimal money contract.
+ * Normalizes a menu item record to preserve exact decimal representation
+ * directly from PostgreSQL NUMERIC without intermediate floating-point casting.
  */
 function normalizeMenuItem(row) {
   if (!row) return null;
+  
+  let priceVal = '0.00';
+  if (row.price !== undefined && row.price !== null) {
+    if (typeof row.price === 'string') {
+      priceVal = row.price;
+    } else if (typeof row.price === 'number') {
+      priceVal = row.price.toFixed(2);
+    } else {
+      priceVal = String(row.price);
+    }
+  }
+
   return {
     ...row,
-    price: row.price !== undefined && row.price !== null
-      ? (typeof row.price === 'number' ? row.price.toFixed(2) : Number(row.price).toFixed(2))
-      : '0.00'
+    price: priceVal
   };
 }
 

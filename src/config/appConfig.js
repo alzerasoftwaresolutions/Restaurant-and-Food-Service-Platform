@@ -40,12 +40,24 @@ export const config = {
 
   database: {
     engine: 'postgresql',
-    url: process.env.DATABASE_URL || null,
-    host: process.env.PGHOST || 'localhost',
-    port: parseInt(process.env.PGPORT, 10) || 5432,
-    user: process.env.PGUSER || 'postgres',
-    password: process.env.PGPASSWORD || 'postgres',
-    database: process.env.PGDATABASE || 'rfsp_core_v1',
+    // In test environment, target isolated test database and do not inherit development DATABASE_URL
+    url: isRunningInTest
+      ? (process.env.DATABASE_URL_TEST || null)
+      : (process.env.DATABASE_URL || null),
+    host: isRunningInTest
+      ? (process.env.PGHOST_TEST || process.env.PGHOST || 'localhost')
+      : (process.env.PGHOST || 'localhost'),
+    port: parseInt(isRunningInTest ? (process.env.PGPORT_TEST || process.env.PGPORT) : process.env.PGPORT, 10) || 5432,
+    user: isRunningInTest
+      ? (process.env.PGUSER_TEST || process.env.PGUSER || 'postgres')
+      : (process.env.PGUSER || 'postgres'),
+    password: isRunningInTest
+      ? (process.env.PGPASSWORD_TEST || process.env.PGPASSWORD || 'postgres')
+      : (process.env.PGPASSWORD || 'postgres'),
+    // Isolate test database (rfsp_core_v1_test) from development database (rfsp_core_v1)
+    database: isRunningInTest
+      ? (process.env.PGDATABASE_TEST || 'rfsp_core_v1_test')
+      : (process.env.PGDATABASE || 'rfsp_core_v1'),
     ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
     pool: {
       max: parseInt(process.env.PGPOOL_MAX, 10) || 20,

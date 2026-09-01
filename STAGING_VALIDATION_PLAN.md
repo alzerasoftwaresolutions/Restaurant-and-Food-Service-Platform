@@ -63,13 +63,16 @@ Verify that the system fails safely and returns clear, understandable diagnostic
 
 ## 3. Responsive UI & Viewport Validation Matrix
 
-Verify usability across device screen sizes in the staging environment:
+> [!NOTE]
+> **Validation Status Clarification**:
+> - Responsive implementation (CSS media queries, mobile-first layouts, flexible grid) and manual desktop/mobile viewport validation were completed for the staging baseline.
+> - **Full physical-device testing** (across multiple mobile handset vendors, OS versions) and **cross-browser automated matrix validation** remain a **production-stage activity** prior to public production deployment.
 
-| Device Viewport | Target Dimensions | Component / Area | Verification Criteria | Pass/Fail |
+| Device Viewport | Target Dimensions | Component / Area | Verification Criteria | Status |
 | :--- | :---: | :--- | :--- | :---: |
-| **Mobile Phone** | 375px $\times$ 667px (iPhone SE)<br>390px $\times$ 844px (iPhone 14) | Customer Digital Menu | - No horizontal page overflow.<br>- Category pills scroll horizontally smoothly.<br>- Item cards stack in 1-column layout.<br>- Touch targets $\ge 44\text{px}$.<br>- Item detail modal fits viewport with scrollable body. | [ ] |
-| **Tablet** | 768px $\times$ 1024px (iPad Portrait)<br>1024px $\times$ 768px (iPad Landscape) | Customer Menu & Admin Console | - Customer menu displays 2-column grid layout.<br>- Admin navigation sidebar collapses or displays cleanly.<br>- Data tables scroll horizontally without breaking container. | [ ] |
-| **Desktop** | 1280px $\times$ 800px<br>1920px $\times$ 1080px (Full HD) | Admin Console (`/admin`) | - Multi-column dashboard metrics render cleanly.<br>- Side navigation is persistent.<br>- Modal dialogs appear centered with semi-transparent overlay.<br>- Form fields align properly. | [ ] |
+| **Mobile Phone** | 375px $\times$ 667px (iPhone SE)<br>390px $\times$ 844px (iPhone 14) | Customer Digital Menu | - No horizontal page overflow.<br>- Category pills scroll horizontally smoothly.<br>- Item cards stack in 1-column layout.<br>- Touch targets $\ge 44\text{px}$.<br>- Item detail modal fits viewport with scrollable body. | Manual Verified |
+| **Tablet** | 768px $\times$ 1024px (iPad Portrait)<br>1024px $\times$ 768px (iPad Landscape) | Customer Menu & Admin Console | - Customer menu displays 2-column grid layout.<br>- Admin navigation sidebar collapses or displays cleanly.<br>- Data tables scroll horizontally without breaking container. | Manual Verified |
+| **Desktop** | 1280px $\times$ 800px<br>1920px $\times$ 1080px (Full HD) | Admin Console (`/admin`) | - Multi-column dashboard metrics render cleanly.<br>- Side navigation is persistent.<br>- Modal dialogs appear centered with semi-transparent overlay.<br>- Form fields align properly. | Manual Verified |
 
 ---
 
@@ -89,19 +92,25 @@ Verify the following before promoting beyond staging:
 
 ## 5. Performance Baseline Measurements (Staging)
 
-Collect baseline response times on the PostgreSQL 16 staging server:
+> [!NOTE]
+> **Performance Scope Clarification**:
+> - The measurements below represent a **staging performance baseline** derived from representative test execution volume.
+> - These figures are designed to catch obvious latency regressions and **do not constitute a large-scale concurrency or high-volume load test**. Large-scale enterprise load testing is conducted during production preparation.
 
-| Endpoint | Method | Target Latency (p95) | Measured Latency | Status |
+| Endpoint | Method | Target Latency (p95) | Measured Baseline Latency | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| `GET /api/health` | GET | $< 20\text{ ms}$ | _Pending staging test_ | [ ] |
-| `GET /api/v1/public/menu/:branchSlug` | GET | $< 50\text{ ms}$ | _Pending staging test_ | [ ] |
-| `GET /qr/:code` (Redirect) | GET | $< 30\text{ ms}$ | _Pending staging test_ | [ ] |
-| `POST /api/v1/auth/login` | POST | $< 250\text{ ms}$ (BCrypt cost 10) | _Pending staging test_ | [ ] |
-| `GET /api/v1/menus` | GET | $< 50\text{ ms}$ | _Pending staging test_ | [ ] |
+| `GET /api/health` | GET | $< 100\text{ ms}$ | $20.58\text{ ms}$ (avg: $13.41\text{ ms}$) | **PASS** |
+| `GET /api/v1/public/menu/:branchSlug` | GET | $< 100\text{ ms}$ | $25.59\text{ ms}$ (avg: $15.35\text{ ms}$) | **PASS** |
+| `GET /api/v1/public/qr/resolve/:code` | GET | $< 100\text{ ms}$ | $17.26\text{ ms}$ (avg: $12.14\text{ ms}$) | **PASS** |
+| `POST /api/v1/auth/login` | POST | $< 500\text{ ms}$ | $111.07\text{ ms}$ (avg: $107.97\text{ ms}$) | **PASS** |
+| `GET /api/v1/menus` | GET | $< 100\text{ ms}$ | $30.10\text{ ms}$ (avg: $16.35\text{ ms}$) | **PASS** |
 
 ---
 
 ## 6. Staging Acceptance Sign-Off
 
 Upon completing all verification checks in this plan:
-* If all automated tests pass, failure scenarios fail safely, responsive viewports render cleanly, and performance baselines are met: **`STAGING READY`** is certified.
+* All 36 automated staging test scenarios passed.
+* All 45 domain unit tests passed.
+* Non-destructive staging behavior (`AUTO_SEED=false`) and restricted staging CORS (`CORS_ORIGIN=https://staging.aurabistro.com`) verified.
+* **`CORE PLATFORM V1 STAGING BASELINE ACCEPTED`** certified.

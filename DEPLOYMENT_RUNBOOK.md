@@ -35,6 +35,7 @@ This runbook provides complete operational guidance for deploying, configuring, 
 * **Deterministic Migrations**: Schema updates are managed via versioned SQL migration scripts executed in sequential order.
 * **Separation of Environments**: `Development DB` $\neq$ `Staging DB` $\neq$ `Production DB`.
 * **Standardized Runtime**: **Node.js 24 LTS** and **PostgreSQL 16**.
+* **Zero Automatic Overwriting**: `AUTO_SEED=false` in staging prevents any accidental data modification upon container restart.
 
 ---
 
@@ -58,9 +59,9 @@ The following environment variables govern application behavior. Configure them 
 | `JWT_SECRET` | Yes | Dev Default | String ($\ge 32$ chars) | Cryptographic signing key for authentication tokens. **Must be unique per env.** |
 | `JWT_EXPIRES_IN` | No | `24h` | Time String (`12h`, `24h`, `7d`) | Lifetime of issued authentication JWT tokens. |
 | `PUBLIC_MENU_BASE_URL` | Yes | `http://localhost:3000/menu` | Full URL | Canonical base URL embedded in generated QR codes. |
-| `CORS_ORIGIN` | Staging | `http://localhost:3000` | Comma-separated URLs | Allowed origins for administrative APIs (e.g. `https://staging.aurabistro.com`). |
+| `CORS_ORIGIN` | Staging | `http://localhost:3000` | Staging Origin URL | Allowed origin for administrative APIs (e.g. `https://staging.aurabistro.com`). |
 | `UPLOAD_DIR` | No | `/app/public/uploads` | Filepath | Persistent directory path for uploaded media assets. |
-| `AUTO_SEED` | No | `true` (dev) / `false` | `true`, `false` | Automatically insert demo data on startup if users table is empty. |
+| `AUTO_SEED` | No | `false` | `true`, `false` | Disabled in staging (`false`) to ensure data persistence across restarts. |
 | `SHUTDOWN_TIMEOUT_MS`| No | `10000` | Integer (ms) | Maximum wait time for in-flight requests during graceful shutdown. |
 
 ---
@@ -86,7 +87,14 @@ The migration runner:
 - Executes unapplied `.sql` scripts in `src/data/migrations/` sequentially inside transactions.
 - Records each applied file with timestamp.
 
-### 3.3 Verifying Database Schema
+### 3.3 Initial Staging Data Population
+When establishing a fresh staging environment, seed data is inserted explicitly once:
+```bash
+npm run seed
+```
+`AUTO_SEED=false` ensures that subsequent application starts and container restarts do not overwrite or modify existing staging records.
+
+### 3.4 Verifying Database Schema
 Verify that the database connection is healthy, migrations are recorded, and all 10 domain tables are present:
 ```bash
 npm run db:verify
@@ -104,6 +112,7 @@ npm run db:verify
    # Set JWT_SECRET=your_staging_secret_key_32_chars_long
    # Set CORS_ORIGIN=https://staging.aurabistro.com
    # Set PUBLIC_MENU_BASE_URL=https://staging.aurabistro.com/menu
+   # Set AUTO_SEED=false
    ```
 2. Build and start the staging stack in detached mode:
    ```bash
@@ -139,10 +148,12 @@ npm run db:verify
    CORS_ORIGIN=https://staging.aurabistro.com
    PUBLIC_MENU_BASE_URL=https://staging.aurabistro.com/menu
    UPLOAD_DIR=/opt/rfsp-core-platform/public/uploads
+   AUTO_SEED=false
    ```
-5. Apply database migrations:
+5. Apply database migrations and seed initial staging data:
    ```bash
    npm run migrate
+   npm run seed
    npm run db:verify
    ```
 6. Setup Systemd Service (`/etc/systemd/system/rfsp.service`):
@@ -175,7 +186,7 @@ npm run db:verify
 
 ## 5. Persistent Media Storage Verification
 
-Uploaded media assets (restaurant logos, banners, food item photographs) must persist across container recreation, redeployment, and host reboots.
+Uploaded media assets (restaurant logos, banners, food item photographs) persist across container recreation, redeployment, and host reboots.
 
 ### Docker Volume Persistence
 * `docker-compose.staging.yml` mounts the named volume `media_uploads_staging` to `/app/public/uploads`.
@@ -282,4 +293,4 @@ pg_restore -h localhost -U rfsp_staging_user -d rfsp_staging --clean --if-exists
 
 ### Issue 3: CORS Rejection for Admin Console
 * **Symptoms**: Admin console requests fail with CORS policy error in browser console.
-* **Remediation**: Ensure `CORS_ORIGIN` contains the exact scheme, host, and port of the staging frontend (e.g. `CORS_ORIGIN=https://staging.aurabistro.com`).
+* **Remediation**: Ensure `CORS_ORIGIN` contains the exact staging origin (e.g. `CORS_ORIGIN=https://staging.aurabistro.com`).

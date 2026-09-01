@@ -50,8 +50,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-staging_super_secure_jwt_secret_key_32bytes_minimum_2026}
       JWT_EXPIRES_IN: 24h
       PUBLIC_MENU_BASE_URL: ${PUBLIC_MENU_BASE_URL:-https://staging.aurabistro.com/menu}
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://staging.aurabistro.com,http://localhost:3000}
-      AUTO_SEED: "true"
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://staging.aurabistro.com}
+      AUTO_SEED: "false"
       LOG_LEVEL: info
     volumes:
       # Persistent Media Storage Volume (Survives container recreation/restarts)

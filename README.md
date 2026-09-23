@@ -190,7 +190,7 @@ npm run seed
 # 4. Verify live HTTP endpoints
 npm run health:check
 
-# 5. Run full automated test suite (46 tests)
+# 5. Run full automated test suite (Currently verified: 47 automated tests)
 npm test
 
 # 6. Start local development server with auto-reload
@@ -211,16 +211,44 @@ Once the development server is running:
 
 ---
 
-## Automated Test Suites
+## Testing & QA Validation
 
+The platform enforces quality engineering through automated domain test suites, database isolation, endpoint health probes, and formal staging verification protocols:
+
+### 1. Automated Domain Test Suites (Node.js Test Runner)
 ```bash
 npm test
 ```
-Executes all 7 domain test suites using isolated in-memory testing adapter:
-1. `tests/identity.test.js`: Authentication, password hashing, JWT tokens, RBAC.
-2. `tests/organization.test.js`: Restaurant, branch lifecycle, and branch query counts.
-3. `tests/menu.test.js`: Menus, categories, items, assignments, availability.
-4. `tests/publishing.test.js`: Authoritative publishing logic and availability filters.
-5. `tests/qr.test.js`: QR code creation, status lifecycle, destination resolution.
-6. `tests/audit.test.js`: Structured administrative action audit logs.
-7. `tests/e2e.test.js`: Full end-to-end integration workflow.
+Executes all 7 domain test suites (**Currently verified: 47 automated tests**) using isolated testing adapters:
+1. `tests/identity.test.js` (5 tests): Authentication, password hashing, JWT tokens, and RBAC authorization boundaries.
+2. `tests/organization.test.js` (7 tests): Restaurant and branch lifecycle state machines, slug uniqueness, and branch query aggregates.
+3. `tests/menu.test.js` (7 tests): Menus, categories, items, branch assignments, and availability toggles.
+4. `tests/publishing.test.js` (5 tests): Authoritative publishing logic and availability filters:
+   $$\text{Visible} = (\text{Restaurant Active}) \land (\text{Branch Active}) \land (\text{Menu Active}) \land (\text{Menu Assigned}) \land (\text{Item Available})$$
+5. `tests/qr.test.js` (7 tests): QR code generation, status lifecycle transitions (`Active`, `Disabled`, `Expired`), and destination resolution.
+6. `tests/audit.test.js` (4 tests): Structured administrative action audit logging and payload verification.
+7. `tests/e2e.test.js` (12 tests): Full end-to-end integration workflow spanning login through customer menu browsing.
+
+### 2. Database Isolation & Precision Contracts
+- **Test Database Isolation**: Enforces dedicated test database isolation (`rfsp_core_v1_test`) to prevent test side effects from mutating development data.
+- **Monetary Contract Verification**: Enforces exact 2-decimal string monetary contracts for PostgreSQL `NUMERIC` prices to avoid floating-point rounding errors.
+
+### 3. Staging Validation Protocol & Edge Case Scenarios
+The repository includes a formal **Staging Validation Plan (`STAGING_VALIDATION_PLAN.md`)** and automated staging test runner (`tests/staging_validation_suite.js` — 36 test blocks across 11 verification areas) verifying **15 failure and edge-case scenarios (`FS-01` to `FS-15`)**:
+- Invalid credentials & missing JWT authorization headers (`FS-01`, `FS-02`)
+- Publishing suppression for inactive restaurants, branches, or archived menus (`FS-03`, `FS-04`, `FS-05`)
+- Inactive / disabled / expired QR code resolutions (`FS-07`, `FS-08`, `FS-09`)
+- Cross-restaurant menu assignment prevention (`FS-10`)
+- Database outage recovery returning HTTP 503 with `"database": {"status": "DOWN"}` (`FS-11`)
+- CORS origin restriction and container volume media persistence across restarts (`FS-14`, `FS-15`)
+
+---
+
+## My Contribution
+
+- **Role**: Core Developer (Architecture, Backend Platform, and Automated Test Suites).
+- **Personal Scope**:
+  - Designed the evolutionary modular monolith architecture, relational schema, and domain service boundaries.
+  - Implemented the PostgreSQL 16 data layer with connection pooling, migration scripts, and seed configurations.
+  - Built and verified all Express REST API endpoints, JWT authentication, and RBAC middleware.
+  - Designed, authored, and verified the **7 domain automated test suites (47 tests)** and the **15-scenario Staging Validation Plan**.
